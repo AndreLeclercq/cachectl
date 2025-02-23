@@ -19,10 +19,11 @@ pub fn list_cache_files() -> Result<Vec<PathBuf>> {
     Ok(entries)  
 }
 
-// Get file size.
-pub fn get_file_size(_path: &Path) -> Result<u64> {
+// Get file size in bytes.
+pub fn get_file_size(path: &Path) -> Result<u64> {
+    let metadata = fs::metadata(path)?;
 
-    Ok(42)
+    Ok(metadata.len())
 }
 
 // Go to directory.
