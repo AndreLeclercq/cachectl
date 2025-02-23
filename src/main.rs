@@ -1,22 +1,12 @@
-use std::path::Path;
-
 mod fs;
 
-fn main() {
+fn main() -> std::io::Result<()> {
     println!("Hello, world!");
-    /*
-    match fs::list_cache_files() {
-        Ok(files) => {
-            println!("{:?}", files)
-        },
-        Err(e) => eprintln!("Error: {}", e),
+    let cache_path = fs::get_cache_path()?; 
+    let entries = fs::list_directory(&cache_path)?;
+    for entry in entries {
+        let size = fs::get_file_size(&entry)?;
+        println!("{:?} - {} bytes", entry, size);
     }
-    */
-    let test_path = Path::new("/home/andre/.cache/nvim");
-    match fs::get_file_size(test_path) {
-        Ok(size) => {
-            println!("{:?} bytes", size)
-        },
-        Err(e) => eprintln!("Error: {}", e),
-    }
+    Ok(())
 }

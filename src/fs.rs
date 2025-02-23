@@ -6,9 +6,12 @@ use std::{fs, env};
 
 // Get the cache path.
 pub fn get_cache_path() -> Result<PathBuf> {
+    if let Some(cache_dir) = env::var_os("XDG_CACHE_HOME").map(PathBuf::from) {
+        return Ok(cache_dir)
+    }
     let mut cache_path = env::var_os("HOME")
         .map(PathBuf::from)
-        .ok_or(Error::new(std::io::ErrorKind::NotFound, "Environment variable 'HOME' not found"))?;
+        .ok_or(Error::new(std::io::ErrorKind::NotFound, "Neither 'XDG_CACHE_HOME or 'HOME' found"))?;
     cache_path.push(".cache");
     Ok(cache_path) 
 }
@@ -25,12 +28,14 @@ pub fn list_directory(path: &Path) -> Result<Vec<PathBuf>> {
 // Get file size in bytes.
 pub fn get_file_size(path: &Path) -> Result<u64> {
     let metadata = fs::metadata(path)?;
-
     Ok(metadata.len())
 }
 
-// Remove file.
-pub fn remove_file(_path: &Path) -> Result<()> {
-
-    Ok(())
+// Remove file or directory.
+pub fn delete(path: &Path) -> Result<()> {
+    if path.is_dir() {
+        fs::remove_dir_all(path)
+    } else {
+        fs::remove_file(path)
+    }
 }
