@@ -4,18 +4,21 @@ use std::io::{Result, Error};
 use std::path::{Path, PathBuf};
 use std::{fs, env};
 
-// List cache files.
-pub fn list_cache_files() -> Result<Vec<PathBuf>> {
+// Get the cache path.
+pub fn get_cache_path() -> Result<PathBuf> {
     let mut cache_path = env::var_os("HOME")
         .map(PathBuf::from)
-        .ok_or(Error::new(std::io::ErrorKind::NotFound, "HOME not found"))?;
+        .ok_or(Error::new(std::io::ErrorKind::NotFound, "Environment variable 'HOME' not found"))?;
     cache_path.push(".cache");
+    Ok(cache_path) 
+}
 
-    let mut entries = fs::read_dir(cache_path)?
+// List files in directory.
+pub fn list_directory(path: &Path) -> Result<Vec<PathBuf>> {
+    let mut entries = fs::read_dir(path)?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>>>()?;
     entries.sort();
-
     Ok(entries)  
 }
 
@@ -24,12 +27,6 @@ pub fn get_file_size(path: &Path) -> Result<u64> {
     let metadata = fs::metadata(path)?;
 
     Ok(metadata.len())
-}
-
-// Go to directory.
-pub fn go_to(_path: &Path) -> Result<()> {
-
-    Ok(())
 }
 
 // Remove file.
