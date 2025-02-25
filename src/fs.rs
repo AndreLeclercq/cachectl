@@ -21,7 +21,7 @@ pub fn get_cache_path() -> Result<PathBuf> {
     }
     let mut cache_path = env::var_os("HOME")
         .map(PathBuf::from)
-        .ok_or(Error::new(std::io::ErrorKind::NotFound, "Neither 'XDG_CACHE_HOME or 'HOME' found"))?;
+        .ok_or(Error::new(std::io::ErrorKind::NotFound, "Neither 'XDG_CACHE_HOME' or 'HOME' found"))?;
     cache_path.push(".cache");
     Ok(cache_path) 
 }
