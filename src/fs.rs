@@ -80,3 +80,95 @@ pub fn delete(path: &Path) -> Result<()> {
         fs::remove_file(path)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::{OsString, OsStr};
+    use tempfile::TempDir;
+
+    // SAFETY NOTE: These tests use env::set_var and env::remove_var which are marked
+    // as unsafe in a multithreaded context. We ensure safety by configuring single-threaded
+    // test execution in Cargo.toml via [package.metadata.cargo-test-options].
+
+    struct EnvVarGuard {
+        name: String,
+        original_value: Option<OsString>,
+    }
+
+    impl EnvVarGuard {
+        fn new(name: &str) -> Self {
+            let original_value = env::var_os(name);
+            EnvVarGuard {
+                name: name.to_string(),
+                original_value,
+            }
+        }
+
+        fn set_var(&self, value: impl AsRef<OsStr>) {
+            // SAFETY: Tests run in a single-threaded context (configured in Cargo.toml), making this operation safe        
+            unsafe { env::set_var(&self.name, value) };
+        }
+
+        fn remove_var(&self) {
+            // SAFETY: Tests run in a single-threaded context (configured in Cargo.toml), making this operation safe
+            unsafe { env::remove_var(&self.name) };
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match &self.original_value {
+                // SAFETY: Tests run in a single-threaded context (configured in Cargo.toml), making this operation safe
+                Some(value) => unsafe { env::set_var(&self.name, value) },
+                None => unsafe { env::remove_var(&self.name) },
+            }
+        }
+    }
+
+    #[test]
+    fn test_get_cache_path_with_xdg() {
+        let xdg_guard = EnvVarGuard::new("XDG_CACHE_HOME");
+
+        let temp_dir = TempDir::new().unwrap();
+        let temp_path = temp_dir.path().to_path_buf();
+
+        xdg_guard.set_var(&temp_path);
+
+        let result = get_cache_path();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), temp_path);
+    }
+
+    #[test]
+    fn test_get_cache_with_home() {
+        let xdg_guard = EnvVarGuard::new("XDG_CACHE_HOME");
+        let home_guard = EnvVarGuard::new("HOME");
+
+        xdg_guard.remove_var();
+
+        let temp_dir = TempDir::new().unwrap();
+        let temp_path = temp_dir.path().to_path_buf();
+
+        home_guard.set_var(&temp_path);
+
+        let result = get_cache_path();
+        assert!(result.is_ok());
+
+        let mut expected_path = temp_path.clone();
+        expected_path.push(".cache");
+        assert_eq!(result.unwrap(), expected_path);
+    }
+
+    #[test]
+    fn test_get_cache_path_no_env_vars() {
+        let xdg_guard = EnvVarGuard::new("XDG_CACHE_HOME");
+        let home_guard = EnvVarGuard::new("HOME");
+
+        xdg_guard.remove_var();
+        home_guard.remove_var();
+
+        let result = get_cache_path();
+        assert!(result.is_err());
+    }
+}

@@ -1,6 +1,6 @@
 # cachectl
 
-A TUI (Terminal User Interface) application for managing cache directories on Arch Linux systems.
+A TUI (Terminal User Interface) application for managing cache directories on Linux systems.
 
 ## Description
 `cachectl` allows you to:
@@ -28,6 +28,9 @@ cargo build
 ```shell
 cargo test
 ```
+
+### Testing Safety Note
+⚠️ **Important:** The test suite modifies environment variables using `std::env::set_var` and `std::env::remove_var`, which are marked as unsafe in multithreaded contexts. For safety, tests are configured to run in single-threaded mode via the `[package.metadata.cargo-test-options]` setting in `Cargo.toml`. Do not override this setting when running tests, as it could lead to undefined behavior.
 
 ## License
 MIT 
