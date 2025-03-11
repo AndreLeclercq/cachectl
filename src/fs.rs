@@ -171,4 +171,36 @@ mod tests {
         let result = get_cache_path();
         assert!(result.is_err());
     }
+
+    // TODO: Crée un répertoire temporaire avec des fichiers pour les tests
+    // TODO: Vérifie que la fonction retourne correctement tous les éléments d'un répertoire
+    // et qu'ils sont bien triés par ordre alphabétique
+    // TODO: Vérifie que la fonction retourne une liste vide pour un répertoire vide
+    // TODO: Vérifie que la fonction gère correctement les erreurs pour un répertoire inexistant
+    // TODO: Vérifie que la fonction gère correctement les erreurs de permission
+    // TODO:Vérifie que la fonction gère correctement un chemin qui pointe vers un fichier et non un répertoire
+
+    #[test]
+    fn test_list_directory() {
+        const FILENAME: &str = "file.txt";
+        const DIRECOTYNAME: &str = "directory";
+        let temp_list = TempDir::new().expect("Temp directory creation failed");
+
+        let mut path_buf_1 = temp_list.path().to_path_buf();
+        path_buf_1.push(DIRECOTYNAME);
+        let mut path_buf_2 = temp_list.path().to_path_buf();
+        path_buf_2.push(FILENAME);
+        
+        let mut list_vec: Vec<PathBuf> = vec![path_buf_1, path_buf_2];
+
+        let file_path = temp_list.path().join(FILENAME);
+        let dir_path = temp_list.path().join(DIRECOTYNAME);
+
+        let tmp_file = fs::File::create(file_path);
+        let tmp_dir = fs::create_dir(dir_path);
+
+        let list_dir = list_directory(temp_list.path()).unwrap();
+
+        assert_eq!(list_dir, list_vec);
+    }
 }
