@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use std::io::{Result, Error};
+use std::io::{Write, Result, Error};
 use std::path::{Path, PathBuf};
 use std::{fs, env};
 
@@ -85,6 +85,7 @@ pub fn delete(path: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use std::ffi::{OsString, OsStr};
+    use fs::File;
     use tempfile::TempDir;
 
     // SAFETY NOTE: These tests use env::set_var and env::remove_var which are marked
@@ -172,35 +173,48 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // TODO: Crée un répertoire temporaire avec des fichiers pour les tests
-    // TODO: Vérifie que la fonction retourne correctement tous les éléments d'un répertoire
-    // et qu'ils sont bien triés par ordre alphabétique
+    fn setup_test_directory() -> (TempDir, Vec<String>) {
+        let temp_dir = TempDir::new().expect("Cannot create temporary directory.");
+
+        let mut file_names = vec![
+            "zebra.txt".to_string(),
+            "apple.txt".to_string(),
+            "banana.txt".to_string(),
+            "1-numeric.txt".to_string(),
+            ".hidden-file".to_string(), 
+        ];
+        
+        for name in &file_names {
+            let file_path = temp_dir.path().join(name);
+            let mut file = File::create(&file_path).expect("Cannot create file test.");
+            writeln!(file, "File content").expect("Cannot write into file text.");
+        }
+
+        let subdir_path = temp_dir.path().join("subdir");
+        file_names.push("subdir".to_string());
+        fs::create_dir(&subdir_path).expect("Cannot create sub-directory.");
+
+        (temp_dir, file_names)
+    }
+
+    #[test]
+    fn test_list_directory_returns_sorted_entries() {
+        let (temp_dir, mut file_names) = setup_test_directory();
+        file_names.sort();
+        let result = list_directory(temp_dir.path());
+
+        assert!(result.is_ok());
+        assert_eq!(&file_names.len(), &result.as_ref().unwrap().len());
+
+        let mut result_value = result.unwrap().into_iter();
+        for value in file_names {
+            assert!(*result_value.next().expect("Result value not found").file_name().unwrap() == *value)
+        }
+    }
+
     // TODO: Vérifie que la fonction retourne une liste vide pour un répertoire vide
     // TODO: Vérifie que la fonction gère correctement les erreurs pour un répertoire inexistant
     // TODO: Vérifie que la fonction gère correctement les erreurs de permission
-    // TODO:Vérifie que la fonction gère correctement un chemin qui pointe vers un fichier et non un répertoire
+    // TODO: Vérifie que la fonction gère correctement un chemin qui pointe vers un fichier et non un répertoire
 
-    #[test]
-    fn test_list_directory() {
-        const FILENAME: &str = "file.txt";
-        const DIRECOTYNAME: &str = "directory";
-        let temp_list = TempDir::new().expect("Temp directory creation failed");
-
-        let mut path_buf_1 = temp_list.path().to_path_buf();
-        path_buf_1.push(DIRECOTYNAME);
-        let mut path_buf_2 = temp_list.path().to_path_buf();
-        path_buf_2.push(FILENAME);
-        
-        let mut list_vec: Vec<PathBuf> = vec![path_buf_1, path_buf_2];
-
-        let file_path = temp_list.path().join(FILENAME);
-        let dir_path = temp_list.path().join(DIRECOTYNAME);
-
-        let tmp_file = fs::File::create(file_path);
-        let tmp_dir = fs::create_dir(dir_path);
-
-        let list_dir = list_directory(temp_list.path()).unwrap();
-
-        assert_eq!(list_dir, list_vec);
-    }
 }
