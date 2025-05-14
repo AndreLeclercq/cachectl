@@ -266,6 +266,8 @@ mod tests {
 
     #[test]
     fn test_list_directory_file_path_error() {
+        // Ensures function properly handles the case when attempting to list a file path
+        // instead of a directory, which should result in an error
         let temp_dir = TempDir::new().expect("Cannot create temporary directory.");
         let file_path = temp_dir.path().join("file.txt");
         File::create(&file_path).expect("Cannot create file.");
@@ -273,20 +275,70 @@ mod tests {
         let result = list_directory(&file_path);
         assert!(result.is_err());
     }
+    
+    #[test]
+    fn test_get_file_size() {
+        // Comprehensive test for get_file_size() covering normal files, empty files,
+        // directories, empty directories, and error cases for non-existent paths
+        let (temp_dir, file_name) = setup_test_directory();
+        let empty_file_path = temp_dir.path().join("empty_file");
+        File::create(&empty_file_path).expect("Cannot create file");
+        
+        let size_of_normal_dir = temp_dir.path().metadata().unwrap().len();
+        let size_of_normal_file = temp_dir.path().join("zebra.txt").metadata().unwrap().len();
+        let size_of_empty_dir = temp_dir.path().join("subdir").metadata().unwrap().len();
+        let size_of_empty_file = empty_file_path.metadata().unwrap().len();
 
-    // TESTS pour get_file_size()
-    // TODO: Vérifier taille correcte d'un fichier normal
-    // TODO: Vérifier erreur pour fichier inexistant
-    // TODO: Vérifier taille d'un fichier vide (0 bytes)
-    // TODO: Vérifier erreur pour permissions insuffisantes
-    // TODO: Vérifier taille d'un répertoire
+        assert!(get_file_size(temp_dir.path()).is_ok());
 
+        assert_eq!(get_file_size(temp_dir.path()).unwrap(), size_of_normal_dir);
+        assert_eq!(get_file_size(temp_dir.path().join("zebra.txt").as_path()).unwrap(), size_of_normal_file);
+        assert_eq!(get_file_size(temp_dir.path().join("empty_file").as_path()).unwrap(), size_of_empty_file);
+        assert_eq!(get_file_size(temp_dir.path().join("subdir").as_path()).unwrap(), size_of_empty_dir);
 
-    // TESTS pour delete()
-    // TODO: Supprimer un fichier existant avec succès
-    // TODO: Supprimer un répertoire vide avec succès
-    // TODO: Supprimer un répertoire avec contenu (récursif)
-    // TODO: Vérifier erreur pour chemin inexistant
-    // TODO: Vérifier erreur pour permissions insuffisantes
+        let not_found_file_path = temp_dir.path().join("not_found_file");
+        let result = get_file_size(not_found_file_path.as_path());
+        assert!(result.is_err());
+    }
 
+    #[test]
+    fn test_delete() {
+        // Tests comprehensive functionality of delete() function including successful file deletion,
+        // empty directory removal, recursive directory deletion with contents, error handling for
+        // non-existent paths, and permission errors when attempting unauthorized deletions       
+        let (temp_dir, file_name) = setup_test_directory();
+
+        let file_path =  temp_dir.path().join("zebra.txt");
+        assert!(fs::exists(&file_path).unwrap());
+        fs::remove_file(&file_path); 
+        assert!(!fs::exists(file_path).unwrap());
+
+        let dir_path = temp_dir.path().join("subdir");
+        assert!(fs::exists(&dir_path).unwrap());
+        delete(&dir_path);
+        assert!(!fs::exists(&dir_path).unwrap());
+
+        let dir_with_file = temp_dir.path().join("dir_with_file");
+        fs::create_dir(&dir_with_file).expect("Cannot create directory");
+        let new_file_path = &dir_with_file.join("new_file");
+        File::create(new_file_path).expect("Cannot create file");
+
+        assert!(fs::exists(&dir_with_file).unwrap());
+        assert!(fs::exists(new_file_path).unwrap());
+        delete(&dir_with_file);
+        assert!(!fs::exists(&dir_with_file).unwrap());
+
+        let result_not_found = delete(&dir_with_file);
+        assert!(result_not_found.is_err());
+
+        fs::create_dir(&dir_path).expect("Cannot create directory.");
+        let metadata = &dir_path.metadata().expect("Metadata not found");
+        let mut permissions = metadata.permissions();
+        permissions.set_mode(0o300);
+        fs::set_permissions(&dir_path, permissions);
+
+        assert!(fs::exists(&dir_path).unwrap());
+        let result_no_permission = delete(&dir_path);
+        assert!(result_not_found.is_err());
+    }
 }
