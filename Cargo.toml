@@ -6,4 +6,10 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.95"
 dirs = "6.0.0"
+tempfile = "3.18.0"
 thiserror = "2.0.11"
+
+# SAFETY NOTE: Environment variables tests use unsafe functions that are only safe
+# in a single-threaded context. This configuration ensures tests run sequentially.
+[package.metadata.cargo-test-options]
+single-threaded = true
